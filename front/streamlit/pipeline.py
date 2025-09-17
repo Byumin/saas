@@ -163,6 +163,36 @@ with tabs[2]:
         st.stop()
     else:
         st.write("문항 응답 화면 (구현 예정)")
+        tree_dict = st.session_state['tree_dict']
+        # tree_dict의 각 검사별로 선택된 제일 하위척도만 scale_code와 test_id 딕셔너리 형태로 추출
+        test_scales_dict = {}
+        for test_id, test_info in tree_dict.items():
+            print(f"Processing test_id for scales: {test_id}")
+            print(test_info)
+            if 'choice' in test_info and test_info['choice']==True:
+                test_scales_dict[test_id] = []
+                
+
+
+        selected_tests = st.session_state['selected_tests']
+        user_info = st.session_state['user_info']
+        # Athena에서 문항 데이터 로드 (예시 쿼리, 실제 테이블 및 컬럼명에 맞게 수정 필요)
+        @st.cache_data()
+        def item_load_data():
+            return wr.athena.read_sql_query(
+                sql="""
+                    SELECT a.test_id, a.test_name, a.essential_info,
+                        b.scale_code, b.scale_name, b.parent_scale_id, b.level, b.version
+                    FROM test_info a
+                    INNER JOIN scale_tree b
+                ON a.test_id = b.test_id
+                AND a.version = b.version
+                WHERE a.version = 'V 1.0'
+            """,
+            database="saas_proto",
+            ctas_approach=False,                           # 기본은 CTAS, False로 두면 그냥 SELECT 실행
+            s3_output="s3://saas-inpsyt/athena-query-results/")    # 쿼리 결과 저장될 S3 경로
+        df = item_load_data()
         # 선택된 검사 및 척도에 따라 문항 로드 및 응답 처리 로직 구현 필요
         # 예: st.radio, st.selectbox, st.slider 등 다양한 입력 위젯 사용 가능
 
